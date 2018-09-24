@@ -1,1 +1,1 @@
-# haskell_project_1
+now you're thinking **_functionally_** 
