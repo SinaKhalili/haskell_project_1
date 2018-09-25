@@ -2,7 +2,7 @@ import System.Environment
 import System.IO
 import Data.Bits
 
--- Different ways of storing a regular expression 
+-- Different ways of storing a regular expression
 data StateNode = StateNode { ch :: Char, state :: Integer} deriving Show
 
 data RE = Epsilon | Ch Char Integer | Seq RE RE | Alt RE RE | Star RE | Group RE deriving Show
@@ -11,7 +11,7 @@ data RE = Epsilon | Ch Char Integer | Seq RE RE | Alt RE RE | Star RE | Group RE
 
 linearize :: RE -> Integer -> (RE , Integer)
 
---Base case for when we hit a Ch a _ 
+--Base case for when we hit a Ch a _
 
 linearize (Ch a _) c  = let counter = c + 1
                             in ((Ch a counter), counter)
@@ -30,10 +30,10 @@ linearize (Star r1) c = let (left, c1) = linearize r1 c
 linearize (Group r1) c = let (left, c1) = linearize r1 c
                              in (Group left , c1)
 
--- End linearize 
+-- End linearize
 
 
--- 
+--
 
 --Now we linearize, and give an in-order array of state nodes?
 linearizeToNodes :: RE -> Integer -> [StateNode]
@@ -80,7 +80,7 @@ find_start_states (Seq r1 _) = find_start_states r1
 find_start_states (Star r1) = find_start_states r1
 find_start_states (Group r1) = find_start_states r1
 
--- Final States 
+-- Final States
 find_final_states :: RE -> [StateNode]
 
 find_final_states (Ch a c) = [StateNode {ch = a, state = c}]
@@ -95,9 +95,9 @@ find_final_states (Seq Epsilon r2) = find_final_states r2
 find_final_states (Seq _ r2) = find_final_states r2
 find_final_states (Star r1) = find_final_states r1
 find_final_states (Group r1) = find_final_states r1
-                                
+
 --Pair states
---makes pairs 
+--makes pairs
 makepairs :: [a] -> [a] -> [(a, a)]
 makepairs x y = [(a, b) | a <- x, b <- y]
 --Merges two RE and a pair , it strictly mergess the first RE since in Alt we only want the pair r1,r2 we cannot have r2,r1
@@ -142,10 +142,10 @@ get_D_table_entry xs c = (find_merged_states_num_bin_helper (map snd  (filter (i
 --  B table
 
 is_char_correct :: Char -> StateNode -> Bool
-is_char_correct b a = (ch a) == b 
+is_char_correct b a = (ch a) == b
 
 get_B_table_entry :: [StateNode] -> Char -> Integer
-get_B_table_entry xs c = find_merged_states_num_bin_helper $ filter (is_char_correct c) xs  
+get_B_table_entry xs c = find_merged_states_num_bin_helper $ filter (is_char_correct c) xs
 
 -----------------------------------------------------
 --- Regex Matching now
@@ -174,7 +174,7 @@ parseElement s = parseChar s
 
 parseItem s =
    case parseElement(s) of
-        -- Just (re, '\\':c:s) -> Just ((Ch c), s)  
+        -- Just (re, '\\':c:s) -> Just ((Ch c), s)
         Just (re, '*':more) -> Just (Star re, more)
         Just (re, more) -> Just (re, more)
         _ -> Nothing
@@ -187,7 +187,7 @@ parseSeq s =
         _ -> Nothing
 
 extendSeq (e1, after1) =
-    case parseItem(after1) of 
+    case parseItem(after1) of
         Just(e2, more) -> extendSeq(Seq e1 e2, more)
         _ -> Just(e1, after1)
 
@@ -199,14 +199,14 @@ parseRE s =
 
 extendRE (e1, []) = Just (e1, [])
 extendRE (e1, '|' : after_bar) =
-    case parseSeq(after_bar) of 
+    case parseSeq(after_bar) of
         Just(e2, more) -> extendRE(Alt e1 e2, more)
         _ -> Nothing
 extendRE(e1, c:more) = Just (e1, c:more)
 
 parseMain :: [Char] -> Maybe RE
 
-parseMain s = case parseRE s of 
+parseMain s = case parseRE s of
     Just (e, []) -> Just e
     _ -> Nothing
 
@@ -219,7 +219,9 @@ match re (a:lines) = char_by_char_traversal_helper re (a:lines) .|. char_by_char
 
 
 char_by_char_traversal :: RE -> [Char] -> Integer -> [(StateNode, StateNode)] -> Integer -> Integer -> Integer
+char_by_char_traversal re [] startStates pairs endStates currentState = 0
 char_by_char_traversal re (c:lines) startStates pairs endStates currentState
+    | currentState .&. endStates /= 0 = -1
     | null lines        = ((get_D_table_entry (vectorizeTuple pairs) currentState) .|. startStates) .&. (get_B_table_entry (vectorize (linearizeToNodes re 0)) c)
     | currentState == 1 = let stateCalculation = startStates .&. (get_B_table_entry (vectorize (linearizeToNodes re 0)) c)
                               in char_by_char_traversal re lines startStates pairs endStates stateCalculation
@@ -227,32 +229,20 @@ char_by_char_traversal re (c:lines) startStates pairs endStates currentState
                               in char_by_char_traversal re lines startStates pairs endStates stateCalculation
 
 char_by_char_traversal_helper :: RE -> [Char] -> Bool
-char_by_char_traversal_helper re lines = 
+char_by_char_traversal_helper re lines =
                                           let (startStates) = find_merged_states_num_bin(vectorize (find_start_states (fst (linearize re 0))));
                                                (endStates) = find_merged_states_num_bin(vectorize (find_final_states (fst (linearize re 0))))
                                               (currentState) = 1
                                              in good_final_state (char_by_char_traversal re lines startStates (find_pair_states (fst (linearize re 0)) []) endStates currentState) endStates
 
--- 4.  Searching for matching lines in a file
-
--- matches :: RE -> [[Char]] -> [[Char]]
--- matches re lines = filter (match re) lines
-
--- matching :: [Char] -> [[Char]] -> [[Char]]
--- matching regexp lines = case parseMain regexp of
---                             Just r -> matches r lines
---                             _ -> []
-
 
 good_final_state :: Integer -> Integer -> Bool
+good_final_state (-1) b = True
 good_final_state a b = a .&. b /= 0
 
 
 matches :: RE -> [[Char]] -> [[Char]]
-matches re lines = filter (match re) lines 
-
--- matches :: RE -> [[Char]] -> [[Char]]
--- matches re lines = filter (match re) lines
+matches re lines = filter (match re) lines
 
 matching :: [Char] -> [[Char]] -> [[Char]]
 matching regexp lines = case parseMain regexp of
@@ -261,10 +251,10 @@ matching regexp lines = case parseMain regexp of
 
 --- general purpose parser
 
--- gmatching :: [Char] -> RE
--- gmatching regexp  = case parseMain regexp of
---                             Just r ->  r 
---                             _ -> Epsilon
+gmatching :: [Char] -> RE
+gmatching regexp  = case parseMain regexp of
+                            Just r ->  r
+                            _ -> Epsilon
 
 
 

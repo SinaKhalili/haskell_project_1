@@ -1,0 +1,7 @@
+Hello, This is a test text file!
+Look for different symbols using grep!
+a
+A little line
+Abo Abo Abo Abo
+Gee this hipster coffee shop sure is a bumping place at 7 oclock!
+ab* ma boii
