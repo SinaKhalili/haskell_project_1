@@ -110,8 +110,8 @@ merge_exclusive_pairs r1 r2 nodes = let (left) = find_pair_states r1 nodes
 find_pair_states :: RE -> [(StateNode, StateNode)] -> [(StateNode, StateNode)]
 find_pair_states (Ch _ _) nodes = nodes
 find_pair_states (Alt r1 r2) nodes = merge_exclusive_pairs r1 r2 nodes
-find_pair_states (Seq r1 r2) nodes = let (left) = find_start_states r1
-                                         (right) = find_final_states r2
+find_pair_states (Seq r1 r2) nodes = let (left) = find_final_states r1
+                                         (right) = find_start_states r2
                                          (pairs) = makepairs left right
                                          (exclusive_pairs) = merge_exclusive_pairs r1 r2 nodes
                                        in exclusive_pairs ++ pairs
@@ -264,3 +264,5 @@ main = do
   [regExp, fileName] <- getArgs
   srcText <- readFile fileName
   hPutStr stdout (unlines (matching regExp (lines srcText)))
+
+
